@@ -1,0 +1,10 @@
+{
+    "submission_file": "giftcard.rb",
+    "submission_root": "",
+    "submit_to_line" : 3,
+    "pre-text": "  def initialize(balance)\n", 
+    "post-text": "  end\n",
+    "grading_exclusions" : [
+        "GiftCard has a test that trivially passes"
+    ]
+}

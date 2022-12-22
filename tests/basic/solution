@@ -1,0 +1,5 @@
+    if balance < 0
+      raise ArgumentError.new("New gift card cannot have negative balance")
+    end
+    @balance = balance
+    @error = nil

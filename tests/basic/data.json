@@ -1,0 +1,9 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "    if balance < 0\n        raise ArgumentError.new(\"New gift card cannot have negative balance\")\n      end\n      @balance = balance\n      @error = nil"
+    },
+    "raw_submitted_answers" : {
+        "student-parsons-solution": "    if balance < 0\n        raise ArgumentError.new(\"New gift card cannot have negative balance\")\n      end\n      @balance = balance\n      @error = nil"
+    },
+    "gradable": true
+}
