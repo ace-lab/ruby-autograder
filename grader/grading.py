@@ -112,11 +112,11 @@ def grade(solution: Suite, submission: Suite, exclude: Set[str]=set({})) -> List
         subRes = 'Pass' if sub.failure is None else 'Fail'
 
         if ref == sub:
-            msg = f"{refRes}ed as intended."
+            msg = f"{refRes}ed just as solution does."
             points = max_pts
         elif None in (ref.failure, sub.failure): 
             # one passed and the other failed
-            msg = f"{subRes}ed rather than {refRes}"
+            msg = f"{subRes}ed rather than {refRes} as the solution does."
             if sub.failure is not None:
                 msg += f": {sub.failure.err_msg} \n"
         else: #if sub.failure.exception != ref.failure.exception:
