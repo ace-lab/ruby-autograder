@@ -1,6 +1,17 @@
 {
-    "gradable":true,
-    "tests":[],
-    "score":0.0
+    "gradable": true, 
+    "tests": [
+        {
+            "name": "GiftCard fails with negative balance", 
+            "output": "Passed just as solution does.", 
+            "points": 1, 
+            "max_points": 1
+        }, {
+            "name": "GiftCard succeeds with positive balance", 
+            "output": "Passed just as solution does.", 
+            "points": 1, 
+            "max_points": 1
+        }
+    ], 
+    "score": 1.0
 }
-

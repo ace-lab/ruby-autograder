@@ -5,7 +5,7 @@ from json.decoder import JSONDecodeError
 from typing import Dict, List, Set, Union
 from dataclasses import dataclass
 
-GRADING_SCRIPT: str = "&&".join([
+GRADING_SCRIPT: str = " && ".join([
     'cd {work}',
     # 'bundle config path /grader/vendor/bundle',
     'bundle install --local --without production --quiet',
@@ -19,6 +19,9 @@ class Failure:
     backtrace: List[str]
 
     def __eq__(self, o) -> bool:
+        if o is None:
+            return False
+        
         same_ex = self.exception == o.exception
 
         backtrace_lens = len(self.backtrace) == len(o.backtrace)
@@ -116,12 +119,12 @@ def grade(solution: Suite, submission: Suite, exclude: Set[str]=set({})) -> List
             points = max_pts
         elif None in (ref.failure, sub.failure): 
             # one passed and the other failed
-            msg = f"{subRes}ed rather than {refRes} as the solution does."
+            msg = f"{subRes}ed rather than {refRes} as the solution does"
             if sub.failure is not None:
-                msg += f": {sub.failure.err_msg} \n"
+                msg += f": \n{sub.failure.err_msg} \n"
         else: #if sub.failure.exception != ref.failure.exception:
             # Both failed, but for different exceptions
-            msg = f"Failed to unexpected error\n{sub.failure.err_msg}\n"
+            msg = f"Failed to unexpected error \n{sub.failure.err_msg}\n"
 
         out.append({
             "name" : name,
