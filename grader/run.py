@@ -13,7 +13,7 @@ WORK_DIR = f"{ROOT_DIR}/working/"
 APP_DIR = f"{ROOT_DIR}/tests/app/"
 
     
-def write_to(content: str, to: str, line: int = 0) -> None:
+def write_to(content: str, to: str, line: int = -1) -> None:
     """Write `content` to line `line` of file `to`"""
     new_lines = [ l + '\n' for l in content.split('\n') ]
     with open(to, "r") as old:

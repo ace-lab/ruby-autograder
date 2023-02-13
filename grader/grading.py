@@ -111,20 +111,14 @@ def grade(solution: Suite, submission: Suite, exclude: Set[str]=set({})) -> List
         points = 0
         max_pts = 1
 
-        refRes = 'Pass' if ref.failure is None else 'Fail'
-        subRes = 'Pass' if sub.failure is None else 'Fail'
+        if ref.failure is not None:
+            raise Exception(f"The test '{name}' did not pass on the solution system under test!")
 
-        if ref == sub:
-            msg = f"{refRes}ed just as solution does."
+        if sub.failure is None:
+            msg = f"Passed."
             points = max_pts
-        elif None in (ref.failure, sub.failure): 
-            # one passed and the other failed
-            msg = f"{subRes}ed rather than {refRes} as the solution does"
-            if sub.failure is not None:
-                msg += f": \n{sub.failure.err_msg} \n"
-        else: #if sub.failure.exception != ref.failure.exception:
-            # Both failed, but for different exceptions
-            msg = f"Failed to unexpected error \n{sub.failure.err_msg}\n"
+        else: 
+            msg = f"Failed: \n{sub.failure.err_msg} \n"
 
         out.append({
             "name" : name,
@@ -134,6 +128,3 @@ def grade(solution: Suite, submission: Suite, exclude: Set[str]=set({})) -> List
         })
 
     return out
-
-if __name__ == '__main__':
-    grade() 
