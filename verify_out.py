@@ -36,7 +36,7 @@ else:
             unexpected.append((test, grades))
     print(f"{len(expected)} expected tests not found")
     print(f"{len(unexpected)} unexpected tests found")
-    print(f"{len(different)} differing grades found")
+    print(f"{len(different)} expected tests with differing grades found")
     print("Run with python -i to inspect `expected`, `unexpected`, and `different`")
 
 

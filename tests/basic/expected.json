@@ -3,12 +3,12 @@
     "tests": [
         {
             "name": "GiftCard fails with negative balance", 
-            "output": "Passed just as solution does.", 
+            "output": "Passed.", 
             "points": 1, 
             "max_points": 1
         }, {
             "name": "GiftCard succeeds with positive balance", 
-            "output": "Passed just as solution does.", 
+            "output": "Passed.", 
             "points": 1, 
             "max_points": 1
         }
