@@ -2,7 +2,7 @@ from run import WORK_DIR
 from os import popen
 from json import loads as json_loads
 from json.decoder import JSONDecodeError
-from typing import Dict, List, Set, Union
+from typing import Callable, Dict, List, Set, Union
 from dataclasses import dataclass
 
 GRADING_SCRIPT: str = " && ".join([
@@ -45,6 +45,35 @@ class Suite:
     def get_test(self, test_name: str) -> Test:
         return self.tests.get(test_name, None)
 
+    def grade(self, failure_case : Callable[[Test], Union[str, None]], exclude: Set[str]=set({})
+                ) -> List[Dict[str, Union[str, int]]]:
+        """Return a list of json objects representing the student's performance
+        on the tests provided in the solution test suite."""
+        out = []
+        
+        for name, test in self.tests.items():
+            if name in exclude:
+                continue
+            
+            points = 0
+            max_pts = 1
+
+            if test.failure is not None:
+                msg = failure_case(test)
+                # raise Exception(f"The test '{name}' did not pass on the solution system under test!")
+                # msg = f"Failed: \n{test.failure.err_msg} \n"
+            elif test.failure is None:
+                msg = f"Passed."
+                points = max_pts
+
+            out.append({
+                "name" : name,
+                "output" : msg,
+                "points" : points,
+                "max_points" : max_pts
+            })
+
+        return out
 
 
 def run(work_dir: str) -> str:
@@ -98,33 +127,3 @@ def execute(solution: bool = False, work_dir=WORK_DIR) -> Suite:
     
     return parse(stdout)
 
-def grade(solution: Suite, submission: Suite, exclude: Set[str]=set({})) -> List[Dict[str, Union[str, int]]]:
-    """Return a list of json objects representing the student's performance
-    on the tests provided in the solution test suite."""
-    out = []
-    for name, ref in solution.tests.items(): # TODO: make this iterator clean
-        if name in exclude:
-            continue
-        
-        sub = submission.get_test(name)
-        
-        points = 0
-        max_pts = 1
-
-        if ref.failure is not None:
-            raise Exception(f"The test '{name}' did not pass on the solution system under test!")
-
-        if sub.failure is None:
-            msg = f"Passed."
-            points = max_pts
-        else: 
-            msg = f"Failed: \n{sub.failure.err_msg} \n"
-
-        out.append({
-            "name" : name,
-            "output" : msg,
-            "points" : points,
-            "max_points" : max_pts
-        })
-
-    return out
