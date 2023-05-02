@@ -13,6 +13,11 @@ runImage() { # run ruby-autograder:dev
     echo \> Container hash: $cont
     code="$(sudo docker container wait $cont)"
     echo \> Container exited with code $code
+    echo \> Stdout:
+    if [[ $code != "0" ]]; then 
+        sudo docker run -a STDOUT -a STDERR --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade ruby-autograder:dev /grader/run.py
+    fi
+    #echo ==============================================================
     return $code
 }
 
@@ -48,8 +53,7 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     # load the variants
     # script_dir="$(pwd)/${0::-18}"
     variant_dir="$(pwd)/$1/"
-    cp -r $variant_dir/common .container_mount/grade/tests/
-    cp -r $variant_dir/var_* .container_mount/grade/tests/
+    cp -r $variant_dir/app .container_mount/grade/tests/
     cp -r $variant_dir/solution .container_mount/grade/tests/
     cp $variant_dir/meta.json .container_mount/grade/tests/
 
@@ -70,7 +74,7 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
 
     # now that the files are in place, install the packages
     pd=`pwd`
-    cd $variant_dir/common
+    cd $variant_dir/app
     bundle package --all --without-production --all-platforms
     bundle install --development
     cd $pd

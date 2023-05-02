@@ -35,7 +35,7 @@ def run(submission_content: str, grading_info: Dict, work_dir: str = WORK_DIR,
         line=grading_info['submit_to_line']
     )
 
-    return grading.execute()
+    return grading.execute(solution=False, work_dir=WORK_DIR)
 
 def verify_valid_solution(sol: grading.Suite, exclusions: Set[str]=set({})) -> None:
     def failed_solution_test(test: grading.Test) -> None:

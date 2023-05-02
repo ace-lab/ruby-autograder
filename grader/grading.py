@@ -1,4 +1,3 @@
-from run import WORK_DIR
 from os import popen
 from json import loads as json_loads
 from json.decoder import JSONDecodeError
@@ -114,7 +113,7 @@ def parse(stdout: str) -> Suite:
     
     return Suite(tests)
 
-def execute(solution: bool = False, work_dir=WORK_DIR) -> Suite:
+def execute(solution: bool, work_dir: str) -> Suite:
     """Run a test suite and return a summary of it"""
     
     stdout = run(work_dir)
