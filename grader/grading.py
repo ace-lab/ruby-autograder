@@ -4,9 +4,12 @@ from json.decoder import JSONDecodeError
 from typing import Callable, Dict, List, Set, Union
 from dataclasses import dataclass
 
+## dev imports
+from time import perf_counter
+
 GRADING_SCRIPT: str = " && ".join([
     'cd {work}',
-    # 'bundle config path /grader/vendor/bundle',
+    # 'bundle config path /grade/working/vendor/bundle',
     'bundle install --local --without production --quiet',
     'rspec --format json' 
 ])
@@ -116,7 +119,9 @@ def parse(stdout: str) -> Suite:
 def execute(solution: bool, work_dir: str) -> Suite:
     """Run a test suite and return a summary of it"""
     
+    s_time = perf_counter()
     stdout = run(work_dir)
+    print("    execution stdout returned in:", perf_counter() - s_time)
 
     if not verifyOutput(stdout):
         suite = "instructor" if solution else "student"

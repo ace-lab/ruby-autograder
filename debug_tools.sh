@@ -3,21 +3,12 @@ run() {
     /grader/run.py
 }
 
-load_sub() {
+load() {
     curr_dir=`pwd`
 
     cd /grader/
-    python3 -c "import run ; run.load_var('$1', False)"
-
-    cd $curr_dir
-    return
-}
-
-load_sol() {
-    curr_dir=`pwd`
-    
-    cd /grader/
-    python3 -c "import run ; run.load_var('$1', True)"
+    # $1 can be "sub" or "sol"
+    python3 -c "import run ; run.load_$1()"
 
     cd $curr_dir
     return
@@ -27,8 +18,8 @@ script_output() {
     curr_dir=`pwd`
 
     cd /grader/
-    imports="from run import WORK_DIR, GRADING_SCRIPT ; import os ; from pprint import pprint"
-    run_cmd="os.popen(f\"cd {WORK_DIR} && {GRADING_SCRIPT}\").read()"
+    imports="from run import WORK_DIR ; from grading import GRADING_SCRIPT ; import os ; from pprint import pprint"
+    run_cmd="os.popen(f'cd {WORK_DIR} && {GRADING_SCRIPT.format(work=WORK_DIR)}').read()"
     python3 -c "$imports ; null = None ; pprint(eval($run_cmd))"
 
     cd $curr_dir
