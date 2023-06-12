@@ -10,7 +10,7 @@ from time import perf_counter
 GRADING_SCRIPT: str = " && ".join([
     'cd {work}',
     # 'bundle config path /grade/working/vendor/bundle',
-    'bundle install --local --without production --quiet',
+    'bundle install --local --quiet',
     'rspec --format json' 
 ])
 
@@ -23,13 +23,13 @@ class Failure:
     def __eq__(self, o) -> bool:
         if o is None:
             return False
-        
+
         same_ex = self.exception == o.exception
 
         backtrace_lens = len(self.backtrace) == len(o.backtrace)
         same_stack = backtrace_lens and all(
             [ stack_1 == stack_2 for stack_1, stack_2 in zip(self.backtrace, o.backtrace) ])
-        
+
         return same_ex and same_stack
 
 @dataclass
@@ -52,20 +52,19 @@ class Suite:
         """Return a list of json objects representing the student's performance
         on the tests provided in the solution test suite."""
         out = []
-        
+
         for name, test in self.tests.items():
             if name in exclude:
                 continue
-            
+
             points = 0
             max_pts = 1
 
             if test.failure is not None:
+                # the test did not pass on the system under test
                 msg = failure_case(test)
-                # raise Exception(f"The test '{name}' did not pass on the solution system under test!")
-                # msg = f"Failed: \n{test.failure.err_msg} \n"
             elif test.failure is None:
-                msg = f"Passed."
+                msg = "Passed."
                 points = max_pts
 
             out.append({
@@ -95,15 +94,15 @@ def parse(stdout: str) -> Suite:
     json = json_loads(stdout)
     tests: Dict[str, Test] = {}
     for rspec_test in json['examples']:
-        
+
         if rspec_test['status'] == 'passed':
             failure = None
         else:
             ex = rspec_test['exception']
 
             failure = Failure(
-                exception=ex['class'], 
-                err_msg=ex['message'], 
+                exception=ex['class'],
+                err_msg=ex['message'],
                 backtrace=ex['backtrace']
             )
 
@@ -113,12 +112,12 @@ def parse(stdout: str) -> Suite:
             name=test_name,
             failure=failure
         )
-    
+
     return Suite(tests)
 
 def execute(solution: bool, work_dir: str) -> Suite:
     """Run a test suite and return a summary of it"""
-    
+
     s_time = perf_counter()
     stdout = run(work_dir)
     print("    execution stdout returned in:", perf_counter() - s_time)
@@ -128,6 +127,5 @@ def execute(solution: bool, work_dir: str) -> Suite:
         print(f"Error when running {suite} test suite. Output:")
         print(f"> {stdout}")
         exit(1)
-    
-    return parse(stdout)
 
+    return parse(stdout)
