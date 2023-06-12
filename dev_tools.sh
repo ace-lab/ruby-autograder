@@ -53,9 +53,9 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     # load the variants
     # script_dir="$(pwd)/${0::-18}"
     variant_dir="$(pwd)/$1/"
-    cp -r $variant_dir/app .container_mount/grade/tests/
-    cp -r $variant_dir/solution .container_mount/grade/tests/
-    cp $variant_dir/meta.json .container_mount/grade/tests/
+    cp -r $variant_dir/* .container_mount/grade/tests/
+    rm .container_mount/grade/tests/data.json
+    rm .container_mount/grade/tests/expected.json
 
     # load submission files
     if [[ -f $variant_dir/data.json ]]; then
@@ -74,9 +74,9 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
 
     # now that the files are in place, install the packages
     pd=`pwd`
-    cd $variant_dir/app
-    bundle package --all --without-production --all-platforms
-    bundle install --development
+    cd .container_mount/grade/tests/app
+    bundle package --all --all-platforms --quiet > /dev/null
+    bundle install --local > /dev/null
     cd $pd
 }
 
@@ -182,6 +182,6 @@ debug() {
 }
 
 clean() {
-    rm -rf .container_mount
+    sudo rm -rf .container_mount
     return
 }

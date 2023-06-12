@@ -51,5 +51,3 @@ else:
         exit(1)
     else:
         print("Difference in (unchecked) outputs")
-
-
