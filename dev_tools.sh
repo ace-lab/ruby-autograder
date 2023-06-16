@@ -76,7 +76,7 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     pd=`pwd`
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
-    bundle install --local > /dev/null
+    # bundle install --local > /dev/null
     cd $pd
 }
 

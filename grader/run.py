@@ -2,9 +2,10 @@
 from time import perf_counter
 start_time = perf_counter()
 from typing import Dict, Set
+from lib.parsing import Suite, Test, parse
 from json import loads as json_loads, dumps as json_dumps
 import importlib.machinery
-import grading
+import lib.executing as exe
 import os
 
 #dev imports;; remove before production
@@ -44,8 +45,8 @@ def write_to(content: str, out_file: str, line: int = -1) -> None:
         out.writelines(final_lines)
 
 def run(submission_content: str, grading_info: Dict, solution: bool, work_dir: str = WORK_DIR,
-        app_dir: str = APP_DIR) -> grading.Suite:
-    """Load and execute the provided submission. Returns the test output as a `grading.Suite`"""
+        app_dir: str = APP_DIR) -> Suite:
+    """Load and execute the provided submission. Returns the test output as a `lib.parsing.Suite`"""
     os.system(f"rm -rf {work_dir}/*")
     os.system(f"cp -r {app_dir}/* {work_dir}")
 
@@ -57,12 +58,12 @@ def run(submission_content: str, grading_info: Dict, solution: bool, work_dir: s
 
     print("    <run> file ops done", perf_counter() - start_time)
 
-    return grading.execute(solution=solution, work_dir=WORK_DIR)
+    return parse(exe.execute(solution=solution, work_dir=WORK_DIR))
 
-def verify_valid_solution(sol: grading.Suite, exclusions: Set[str]=set()) -> None:
+def verify_valid_solution(sol: Suite, exclusions: Set[str]=set()) -> None:
     """Verify that the solution meets the following criterion and throw a 
        `SolutionError` otherwise"""
-    def failed_solution_test(test: grading.Test) -> None:
+    def failed_solution_test(test: Test) -> None:
         raise SolutionError(
             f"The test '{test.name}' did not pass on the solution system under test!" )
 
@@ -92,8 +93,10 @@ def main():
         os.mkdir(WORK_DIR)
 
     print("Assertions and setup done", perf_counter() - start_time)
+    
+    print("Running Solution ...")
 
-    sol: grading.Suite = run(
+    sol: Suite = run(
         grading_info.get('pre-text', '') + "\n" +
             solution + "\n" +
             grading_info.get('post-text', ''),
@@ -110,20 +113,30 @@ def main():
 
     print("Solution verified", perf_counter() - start_time)
 
-    sub: grading.Suite = run(
-        grading_info.get('pre-text', '') + "\n" +
-            get_submission(submission_data) + "\n" +
-            grading_info.get('post-text', ''),
-        grading_info,
-        solution=False
-    )
+    print("Running Submission ...")
+
+    try:
+        sub: Suite = run(
+            grading_info.get('pre-text', '') + "\n" +
+                get_submission(submission_data) + "\n" +
+                grading_info.get('post-text', ''),
+            grading_info,
+            solution=False
+        )
+    except exe.ExecutionError as error:
+        print(error.args[0])
+        exit(1)
 
     print("Submission run", perf_counter() - start_time)
 
-    sub_report = sub.grade(
-        failure_case=(lambda test: f"Failed: \n{test.failure.err_msg} \n"),
-        exclude=set(grading_info['grading_exclusions'])
-    )
+    try:
+        sub_report = sub.grade(
+            failure_case=(lambda test: f"Failed: \n{test.failure.err_msg} \n"),
+            exclude=set(grading_info['grading_exclusions'])
+        )
+    except exe.ExecutionError as error:
+        print(error.args[0])
+        exit(1)
 
     print("Submission graded", perf_counter() - start_time)
 

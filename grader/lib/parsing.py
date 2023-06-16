@@ -1,18 +1,6 @@
-from os import popen
-from json import loads as json_loads
-from json.decoder import JSONDecodeError
 from typing import Callable, Dict, List, Set, Union
 from dataclasses import dataclass
-
-## dev imports
-from time import perf_counter
-
-GRADING_SCRIPT: str = " && ".join([
-    'cd {work}',
-    # 'bundle config path /grade/working/vendor/bundle',
-    'bundle install --local --quiet',
-    'rspec --format json' 
-])
+from json import loads as json_loads
 
 @dataclass
 class Failure:
@@ -20,15 +8,15 @@ class Failure:
     err_msg: str
     backtrace: List[str]
 
-    def __eq__(self, o) -> bool:
-        if o is None:
+    def __eq__(self, other) -> bool:
+        if other is None:
             return False
 
-        same_ex = self.exception == o.exception
+        same_ex = self.exception == other.exception
 
-        backtrace_lens = len(self.backtrace) == len(o.backtrace)
+        backtrace_lens = len(self.backtrace) == len(other.backtrace)
         same_stack = backtrace_lens and all(
-            [ stack_1 == stack_2 for stack_1, stack_2 in zip(self.backtrace, o.backtrace) ])
+            [ stack_1 == stack_2 for stack_1, stack_2 in zip(self.backtrace, other.backtrace) ])
 
         return same_ex and same_stack
 
@@ -37,8 +25,8 @@ class Test:
     name: str
     failure: Failure = None
 
-    def __eq__(self, o) -> bool:
-        return self.failure == o.failure
+    def __eq__(self, other) -> bool:
+        return self.failure == other.failure
 
 @dataclass
 class Suite:
@@ -76,19 +64,6 @@ class Suite:
 
         return out
 
-
-def run(work_dir: str) -> str:
-    """Run a test suite and return stdout"""
-    return popen(f"cd {work_dir} && {GRADING_SCRIPT.format(work=work_dir)}").read()
-
-def verifyOutput(output: str) -> bool:
-    """Returns if the passed string is a valid output"""
-    try:
-        data = json_loads(output)
-    except JSONDecodeError:
-        return False
-    return data['summary']['errors_outside_of_examples_count'] == 0
-
 def parse(stdout: str) -> Suite:
     """Produce a summary of a run test suite"""
     json = json_loads(stdout)
@@ -114,18 +89,3 @@ def parse(stdout: str) -> Suite:
         )
 
     return Suite(tests)
-
-def execute(solution: bool, work_dir: str) -> Suite:
-    """Run a test suite and return a summary of it"""
-
-    s_time = perf_counter()
-    stdout = run(work_dir)
-    print("    execution stdout returned in:", perf_counter() - s_time)
-
-    if not verifyOutput(stdout):
-        suite = "instructor" if solution else "student"
-        print(f"Error when running {suite} test suite. Output:")
-        print(f"> {stdout}")
-        exit(1)
-
-    return parse(stdout)
