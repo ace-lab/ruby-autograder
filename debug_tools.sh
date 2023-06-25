@@ -18,7 +18,7 @@ script_output() {
     curr_dir=`pwd`
 
     cd /grader/
-    imports="from run import WORK_DIR ; from grading import GRADING_SCRIPT ; import os ; from pprint import pprint"
+    imports="from run import WORK_DIR ; from lib.executing import GRADING_SCRIPT ; import os ; from pprint import pprint"
     run_cmd="os.popen(f'cd {WORK_DIR} && {GRADING_SCRIPT.format(work=WORK_DIR)}').read()"
     python3 -c "$imports ; null = None ; pprint(eval($run_cmd))"
 

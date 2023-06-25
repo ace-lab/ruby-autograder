@@ -74,9 +74,10 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
 
     # now that the files are in place, install the packages
     pd=`pwd`
+    rvm use 2.6.10
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
-    bundle install --local > /dev/null
+    # bundle install --local > /dev/null
     cd $pd
 }
 
@@ -126,6 +127,8 @@ run_tests() {
 
     while IFS= read -r variant_dir; do
         
+        echo Running test $variant_dir
+
         prep_mount $variant_dir
         if [[ $? != "0" ]]; then return 1; fi
 
