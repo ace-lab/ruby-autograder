@@ -21,14 +21,23 @@ runImage() { # run $IMAGE:dev as `autograder_test`
     # silence both stderr and stdout 
     deleteCont &> /dev/null
 
-    cont="$(sudo docker run --name autograder_test --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade -d $IMAGE:dev /grader/run.py)"
-    echo \> Container hash: $cont
-    code="$(sudo docker container wait $cont)"
+    echo Running Image ...
+    ( sudo docker run --name autograder_test --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade $IMAGE:dev /grader/run.py \
+            2>.container_mount/stderr \
+            1>.container_mount/stdout & )
+    sleep 1
+    docker container ls
+    code="$(docker container wait autograder_test)"
     echo \> Container exited with code $code
     if [[ $code != "0" ]]; then 
         echo \> Stdout:
-        sudo docker run -a STDOUT -a STDERR --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade $IMAGE:dev /grader/run.py
+        cat .container_mount/stdout
+
+        echo \> Stderr:
+        cat .container_mount/stderr
     fi
+    rm .container_mount/stdout
+    rm .container_mount/stderr
     #echo ==============================================================
     return $code
 }
@@ -130,17 +139,16 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
 
     prep_mount $1
     if [[ $? != "0" ]]; then return 1; fi
-    echo done.
 
     echo Running the grader
     buildImage
     runImage
 
     if [[ $? == 0 ]]; then
-        deleteImage
+        deleteCont > /dev/null
         if [[ $? != "0" ]]; then return 1; fi
 
-        deleteCont
+        deleteImage
         if [[ $? != "0" ]]; then return 1; fi
     else return 1; fi
 
