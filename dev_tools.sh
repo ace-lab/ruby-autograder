@@ -1,6 +1,17 @@
 REMOTE="saasbook"
 IMAGE="pl-fpp-ruby-autograder"
 
+TMP_OUT=/tmp/dev_out
+indent() {
+    local code=$?
+    local indent=1
+    
+    if [ -n "$1" ]; then indent=$1; fi
+    pr -to $(($indent * 2))
+
+    return $code
+}
+
 build() { sudo docker build -t $REMOTE/$IMAGE . ; }
 push() { sudo docker push $REMOTE/$IMAGE:latest ; }
 buildPush() { build && push ; }
@@ -8,12 +19,13 @@ buildPush() { build && push ; }
 buildImage() { # build $IMAGE:dev
     # only report errors
     hash="$(sudo docker build -q -t $IMAGE:dev .  | cut -d: -f2)"
-    echo \> Image name/hash: $IMAGE:dev / $hash
+    echo -e \> Image name / hash: \\n\\t $IMAGE:dev / $hash
 }
 
 deleteImage() { # delete $IMAGE:dev locally
     echo -n Deleting image ...
     sudo docker image rm $IMAGE:dev > /dev/null
+    if [[ $? != "0" ]]; then return 1; fi
     echo done.
 }
 
@@ -26,15 +38,15 @@ runImage() { # run $IMAGE:dev as `autograder_test`
             2>.container_mount/stderr \
             1>.container_mount/stdout & )
     sleep 1
-    docker container ls
+    docker container ls | pr -to 4
     code="$(docker container wait autograder_test)"
-    echo \> Container exited with code $code
+    echo \> Container exited with code $code | pr -to 4
     if [[ $code != "0" ]]; then 
         echo \> Stdout:
-        cat .container_mount/stdout
+        pr -to 2 .container_mount/stdout
 
         echo \> Stderr:
-        cat .container_mount/stderr
+        pr -to 2 .container_mount/stderr
     fi
     rm .container_mount/stdout
     rm .container_mount/stderr
@@ -50,13 +62,13 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
 
     which jq > /dev/null
     if [[ $? != "0" ]]; then 
-        echo "jq is required to run this script, please install and add it to your \$PATH"
+        (echo "jq is required to run this script, please install and add it to your \$PATH" 1>&2)
         return 1
     fi
 
     echo "Preparing mount files ... "
 
-    sudo rm -rf .container_mount
+    clean 2>/dev/null
 
     # make all the necessary dirs
     mkdir .container_mount
@@ -85,14 +97,15 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
         ## double-check that _submission_file isn't in /grade/student
         rm .container_mount/grade/student/_submission_file
     else 
-        echo "No submission found: Exiting"
+        (echo "No submission found: Exiting" 1>&2)
         return 1
     fi
 
     # now that the files are in place, install the packages
     pd=`pwd`
-    rvm use 2.6.10
+    rvm use 2.6.10 > $TMP_OUT
     if [[ $? != "0" ]]; then return 1; fi
+    pr -to 2 $TMP_OUT
     
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
@@ -104,7 +117,9 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
 
 clean() {
     sudo chown -R $USER .container_mount/grade/
+    if [[ $? != "0" ]]; then return 1; fi
     rm -r .container_mount/
+    if [[ $? != "0" ]]; then return 1; fi
     return
 }
 
@@ -115,13 +130,16 @@ clean_up() { # Remove .container_mount/ and delete $IMAGE:dev and $IMAGE:latest 
 
 compare() { # assuming $1 is the variant directory, $2 is the script directory
     # compare the result
-    echo ========================= COMPARISON =========================
-    echo
+    echo Comparison:
+    
     output_loc="`pwd`/.container_mount/grade/results/results.json"
-    python3 $2/tests/verify_result.py $1/expected.json $output_loc
+    expect_loc="$1/expected.json"
+    script="$2/tests/verify_result.py"
+    
+    python3 $script $expect_loc $output_loc > $TMP_OUT
     exit_code=$?
-    echo
-    echo ======================= END COMPARISON =======================
+
+    pr -to 4 $TMP_OUT
 
     return $exit_code
 }
@@ -141,18 +159,19 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
     if [[ $? != "0" ]]; then return 1; fi
 
     echo Running the grader
-    buildImage
-    runImage
+    buildImage | pr -to 2
+    runImage | pr -to 2
 
     if [[ $? == 0 ]]; then
         deleteCont > /dev/null
         if [[ $? != "0" ]]; then return 1; fi
 
-        deleteImage
+        deleteImage | pr -to 2
         if [[ $? != "0" ]]; then return 1; fi
     else return 1; fi
+    echo done.
 
-    compare $1 $script_dir
+    compare $1 $script_dir 
 
     return $?
 }
@@ -170,24 +189,35 @@ run_tests() { # run all tests in tests/
         
         echo Running test $variant_dir
 
-        prep_mount $variant_dir
-        if [[ $? != "0" ]]; then return 1; fi
+        prep_mount $variant_dir > $TMP_OUT
+        if [[ $? != "0" ]]; then 
+            pr -to 4 $TMP_OUT
+            return 1
+        fi
+        pr -to 4 $TMP_OUT
+        
 
-        runImage
+        runImage > $TMP_OUT
         if [[ $? != "0" ]]; then 
             failures=$((failures+1)); 
             failed="$failed\n> $variant_dir"
+            pr -to 4 $TMP_OUT
         else
-            compare $variant_dir $script_dir
+            pr -to 4 $TMP_OUT
+            compare $variant_dir $script_dir > $TMP_OUT
             if [[ $? != "0" ]]; then 
                 failures=$((failures+1)); 
                 failed="$failed\n> $variant_dir"
             fi
+            pr -to 4 $TMP_OUT
         fi
 
     done  <<< "$tests"
 
-    if [[ $failures == "0" ]]; then deleteImage; fi
+    if [[ $failures == "0" ]]; then 
+        deleteCont | pr -to 2
+        deleteImage | pr -to 2
+    fi
 
     echo -e "Failures: $failures $failed"
     return $((1 - ($failures == 0)))
