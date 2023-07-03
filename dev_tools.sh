@@ -12,8 +12,8 @@ indent() {
     return $code
 }
 
-build() { sudo docker build -t $REMOTE/$IMAGE . ; }
-push() { sudo docker push $REMOTE/$IMAGE:latest ; }
+build() { docker build -t $REMOTE/$IMAGE . ; }
+push() { docker push $REMOTE/$IMAGE:latest ; }
 buildPush() { build && push ; }
 
 buildImage() { # build $IMAGE:dev
