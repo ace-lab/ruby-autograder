@@ -107,7 +107,7 @@ def main():
     print("Solution run", perf_counter() - start_time)
 
     try:
-        verify_valid_solution(sol, set(grading_info['grading_exclusions']))
+        verify_valid_solution(sol, set(grading_info.get('grading_exclusions', [])))
     except SolutionError as error:
         print(*error.args)
 
@@ -132,7 +132,7 @@ def main():
 
         sub_report = sub.grade(
             failure_case=(lambda test: f"Failed: \n{test.failure.err_msg} \n"),
-            exclude=set(grading_info['grading_exclusions'])
+            exclude=set(grading_info.get('grading_exclusions', []))
         )
 
         grading_data['tests'] = sub_report
