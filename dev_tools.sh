@@ -127,6 +127,19 @@ clean_up() { # Remove .container_mount/ and delete $IMAGE:dev and $IMAGE:latest 
     deleteImage
 }
 
+clean() {
+    sudo chown -R $USER .container_mount/grade/
+    if [[ $? != "0" ]]; then return 1; fi
+    rm -r .container_mount/
+    if [[ $? != "0" ]]; then return 1; fi
+    return
+}
+
+clean_up() { # Remove .container_mount/ and delete $IMAGE:dev and $IMAGE:latest locally
+    clean
+    deleteImage
+}
+
 compare() { # assuming $1 is the variant directory, $2 is the script directory
     # compare the result
     echo Comparison:
