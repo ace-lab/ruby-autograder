@@ -1,32 +1,49 @@
-build() { sudo docker build -t saasbook/pl-fpp-ruby-autograder . ; }
-push() { sudo docker push saasbook/pl-fpp-ruby-autograder:latest ; }
+REMOTE="saasbook"
+IMAGE="pl-fpp-ruby-autograder"
+
+build() { sudo docker build -t $REMOTE/$IMAGE . ; }
+push() { sudo docker push $REMOTE/$IMAGE:latest ; }
 buildPush() { build && push ; }
 
-buildCont() { # build ruby-autograder:dev
+buildImage() { # build $IMAGE:dev
     # only report errors
-    hash="$(sudo docker build -q -t ruby-autograder:dev .  | cut -d: -f2)"
-    echo \> Image name/hash: ruby-autograder:dev / $hash
+    hash="$(sudo docker build -q -t $IMAGE:dev .  | cut -d: -f2)"
+    echo \> Image name/hash: $IMAGE:dev / $hash
 }
 
-runImage() { # run ruby-autograder:dev
-    cont="$(sudo docker run --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade -d ruby-autograder:dev /grader/run.py)"
-    echo \> Container hash: $cont
-    code="$(sudo docker container wait $cont)"
+deleteImage() { # delete $IMAGE:dev locally
+    echo -n Deleting image ...
+    sudo docker image rm $IMAGE:dev > /dev/null
+    echo done.
+}
+
+runImage() { # run $IMAGE:dev as `autograder_test`
+    # silence both stderr and stdout 
+    deleteCont &> /dev/null
+
+    echo Running Image ...
+    ( sudo docker run --name autograder_test --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade $IMAGE:dev /grader/run.py \
+            2>.container_mount/stderr \
+            1>.container_mount/stdout & )
+    sleep 1
+    docker container ls
+    code="$(docker container wait autograder_test)"
     echo \> Container exited with code $code
-    echo \> Stdout:
     if [[ $code != "0" ]]; then 
-        sudo docker run -a STDOUT -a STDERR --network none --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade ruby-autograder:dev /grader/run.py
+        echo \> Stdout:
+        cat .container_mount/stdout
+
+        echo \> Stderr:
+        cat .container_mount/stderr
     fi
+    rm .container_mount/stdout
+    rm .container_mount/stderr
     #echo ==============================================================
     return $code
 }
 
-clean_up() { # assuming $1 is the container hash
-    sudo chown -R $USER .container_mount/grade/
-    # destroy the container
-    echo -n Deleting continer ...
-    sudo docker container rm $1 > /dev/null
-    echo done.
+deleteCont() { # delete the container named `autograder_test`
+    sudo docker container rm autograder_test
 }
 
 prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
@@ -75,10 +92,25 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     # now that the files are in place, install the packages
     pd=`pwd`
     rvm use 2.6.10
+    if [[ $? != "0" ]]; then return 1; fi
+    
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
     # bundle install --local > /dev/null
     cd $pd
+
+    echo done.
+}
+
+clean() {
+    sudo chown -R $USER .container_mount/grade/
+    rm -r .container_mount/
+    return
+}
+
+clean_up() { # Remove .container_mount/ and delete $IMAGE:dev and $IMAGE:latest locally
+    clean
+    deleteImage
 }
 
 compare() { # assuming $1 is the variant directory, $2 is the script directory
@@ -96,19 +128,28 @@ compare() { # assuming $1 is the variant directory, $2 is the script directory
 
 run_test() { # $1 is variant_dir (the question/tests/ directory)
 
+    if [[ $1 == "" ]]; then 
+        echo Test not provided, assuming \`run_tests\`
+        run_tests
+        if [[ $? != "0" ]]; then return 1; fi
+    fi
+
     # basically remove "run_test.sh" from the script call to get the directory
     script_dir=`pwd`
 
     prep_mount $1
     if [[ $? != "0" ]]; then return 1; fi
-    echo done.
 
     echo Running the grader
-    buildCont
+    buildImage
     runImage
 
     if [[ $? == 0 ]]; then
-        clean_up $cont
+        deleteCont > /dev/null
+        if [[ $? != "0" ]]; then return 1; fi
+
+        deleteImage
+        if [[ $? != "0" ]]; then return 1; fi
     else return 1; fi
 
     compare $1 $script_dir
@@ -116,14 +157,14 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
     return $?
 }
 
-run_tests() {
+run_tests() { # run all tests in tests/
     tests=`ls -d tests/*/`
     script_dir=`pwd`
 
     failures=0
     failed=""
 
-    buildCont
+    buildImage
 
     while IFS= read -r variant_dir; do
         
@@ -135,22 +176,29 @@ run_tests() {
         runImage
         if [[ $? != "0" ]]; then 
             failures=$((failures+1)); 
-            failed="$failed\n$line"
+            failed="$failed\n> $variant_dir"
         else
             compare $variant_dir $script_dir
             if [[ $? != "0" ]]; then 
                 failures=$((failures+1)); 
-                failed="$failed\n$line"
+                failed="$failed\n> $variant_dir"
             fi
         fi
 
     done  <<< "$tests"
 
+    if [[ $failures == "0" ]]; then deleteImage; fi
+
     echo -e "Failures: $failures $failed"
     return $((1 - ($failures == 0)))
 }
 
-new_test() {
+new_test() { # $1 is the new test name (must be a valid filename)
+
+    if [[ $1 == "" ]]; then 
+        echo Error: Please supply a test name that is a valid filename
+        return 1
+    fi
 
     # make the base folders and files
     cd tests/
@@ -180,11 +228,9 @@ new_test() {
 }
 
 debug() {
-    sudo docker run -it --rm --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade --mount type=bind,source=`pwd`/debug_tools.sh,target=/tools.sh ruby-autograder:dev
-    return
-}
-
-clean() {
-    sudo rm -rf .container_mount
+    sudo docker run -it --rm \
+        --mount type=bind,source=`pwd`/.container_mount/grade,target=/grade \
+        --mount type=bind,source=`pwd`/debug_tools.sh,target=/tools.sh \
+        $IMAGE:dev
     return
 }

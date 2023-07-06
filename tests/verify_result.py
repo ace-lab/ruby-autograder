@@ -53,7 +53,7 @@ class GraderRun:
         if expected_run.gradable is not resulted_run.gradable:
             raise GradabilityError(
                 f"This run is expected to be {'not ' if expected_run.gradable else ''}gradable" + \
-                 " but returns {'not ' if resulted_run.gradable else ''}"
+                f" but is {'not ' if resulted_run.gradable else ''}"
             )
 
         if not expected_run.gradable:
