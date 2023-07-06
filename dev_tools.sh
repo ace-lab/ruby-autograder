@@ -3,13 +3,11 @@ IMAGE="pl-fpp-ruby-autograder"
 
 TMP_OUT=/tmp/dev_out
 indent() {
-    local code=$?
     local indent=1
 
     if [ -n "$1" ]; then indent=$1; fi
     pr -to $(($indent * 2))
-
-    return $code
+    return $?
 }
 
 build() { docker build -t $REMOTE/$IMAGE . ; }
@@ -43,10 +41,10 @@ runImage() { # run $IMAGE:dev as `autograder_test`
     echo \> Container exited with code $code | indent 2
     if [[ $code != "0" ]]; then 
         echo \> Stdout:
-        cat .container_mount/stdout | indent
+        cat .container_mount/stdout | indent 
 
         echo \> Stderr:
-        cat .container_mount/stderr | indent
+        cat .container_mount/stderr | indent 
     fi
     rm .container_mount/stdout
     rm .container_mount/stderr
@@ -104,14 +102,16 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     # now that the files are in place, install the packages
     pd=`pwd`
     rvm use 2.6.10 | indent 
-    if [[ $? != "0" ]]; then return 1; fi
+    if [[ "${PIPE_INDENT[0]}" != "0" ]]; then return 1; fi
     
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
+    if [[ $? != "0" ]]; then 
+        cd $pd
+        return 1
+    fi
     # bundle install --local > /dev/null
     cd $pd
-
-    echo done.
 }
 
 clean() {
@@ -136,9 +136,8 @@ compare() { # assuming $1 is the variant directory, $2 is the script directory
     script="$2/tests/verify_result.py"
     
     python3 $script $expect_loc $output_loc | indent 2
-    exit_code=$?
 
-    return $exit_code
+    return "${PIPESTATUS[0]}"
 }
 
 run_test() { # $1 is variant_dir (the question/tests/ directory)
@@ -159,12 +158,12 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
     buildImage | indent
     runImage | indent
 
-    if [[ $? == 0 ]]; then
+    if [[ "${PIPE_INDENT[0]}" == 0 ]]; then
         deleteCont > /dev/null
         if [[ $? != "0" ]]; then return 1; fi
 
         deleteImage | indent
-        if [[ $? != "0" ]]; then return 1; fi
+        if [[ "${PIPE_INDENT[0]}" != "0" ]]; then return 1; fi
     else return 1; fi
     echo done.
 
@@ -187,16 +186,16 @@ run_tests() { # run all tests in tests/
         echo Running test $variant_dir
 
         prep_mount $variant_dir | indent 2
-        if [[ $? != "0" ]]; then return 1; fi
+        if [[ "${PIPE_INDENT[0]}" != "0" ]]; then return 1; fi
         
 
         runImage | indent 2
-        if [[ $? != "0" ]]; then 
+        if [[ "${PIPESTATUS[0]}" != "0" ]]; then 
             failures=$((failures+1)); 
             failed="$failed\n> $variant_dir"
         else
             compare $variant_dir $script_dir | indent 2
-            if [[ $? != "0" ]]; then 
+            if [[ "${PIPESTATUS[0]}" != "0" ]]; then 
                 failures=$((failures+1)); 
                 failed="$failed\n> $variant_dir"
             fi
@@ -205,8 +204,8 @@ run_tests() { # run all tests in tests/
     done  <<< "$tests"
 
     if [[ $failures == "0" ]]; then 
-        deleteCont | indent
-        deleteImage | indent
+        deleteCont | indent 
+        deleteImage | indent 
     fi
 
     echo -e "Failures: $failures $failed"
