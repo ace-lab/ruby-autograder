@@ -5,7 +5,7 @@ TMP_OUT=/tmp/dev_out
 indent() {
     local code=$?
     local indent=1
-    
+
     if [ -n "$1" ]; then indent=$1; fi
     pr -to $(($indent * 2))
 
@@ -38,15 +38,15 @@ runImage() { # run $IMAGE:dev as `autograder_test`
             2>.container_mount/stderr \
             1>.container_mount/stdout & )
     sleep 1
-    docker container ls | pr -to 4
+    docker container ls | indent 2
     code="$(docker container wait autograder_test)"
-    echo \> Container exited with code $code | pr -to 4
+    echo \> Container exited with code $code | indent 2
     if [[ $code != "0" ]]; then 
         echo \> Stdout:
-        pr -to 2 .container_mount/stdout
+        cat .container_mount/stdout | indent
 
         echo \> Stderr:
-        pr -to 2 .container_mount/stderr
+        cat .container_mount/stderr | indent
     fi
     rm .container_mount/stdout
     rm .container_mount/stderr
@@ -103,9 +103,8 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
 
     # now that the files are in place, install the packages
     pd=`pwd`
-    rvm use 2.6.10 > $TMP_OUT
+    rvm use 2.6.10 | indent 
     if [[ $? != "0" ]]; then return 1; fi
-    pr -to 2 $TMP_OUT
     
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
@@ -136,10 +135,8 @@ compare() { # assuming $1 is the variant directory, $2 is the script directory
     expect_loc="$1/expected.json"
     script="$2/tests/verify_result.py"
     
-    python3 $script $expect_loc $output_loc > $TMP_OUT
+    python3 $script $expect_loc $output_loc | indent 2
     exit_code=$?
-
-    pr -to 4 $TMP_OUT
 
     return $exit_code
 }
@@ -159,14 +156,14 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
     if [[ $? != "0" ]]; then return 1; fi
 
     echo Running the grader
-    buildImage | pr -to 2
-    runImage | pr -to 2
+    buildImage | indent
+    runImage | indent
 
     if [[ $? == 0 ]]; then
         deleteCont > /dev/null
         if [[ $? != "0" ]]; then return 1; fi
 
-        deleteImage | pr -to 2
+        deleteImage | indent
         if [[ $? != "0" ]]; then return 1; fi
     else return 1; fi
     echo done.
@@ -189,34 +186,27 @@ run_tests() { # run all tests in tests/
         
         echo Running test $variant_dir
 
-        prep_mount $variant_dir > $TMP_OUT
-        if [[ $? != "0" ]]; then 
-            pr -to 4 $TMP_OUT
-            return 1
-        fi
-        pr -to 4 $TMP_OUT
+        prep_mount $variant_dir | indent 2
+        if [[ $? != "0" ]]; then return 1; fi
         
 
-        runImage > $TMP_OUT
+        runImage | indent 2
         if [[ $? != "0" ]]; then 
             failures=$((failures+1)); 
             failed="$failed\n> $variant_dir"
-            pr -to 4 $TMP_OUT
         else
-            pr -to 4 $TMP_OUT
-            compare $variant_dir $script_dir > $TMP_OUT
+            compare $variant_dir $script_dir | indent 2
             if [[ $? != "0" ]]; then 
                 failures=$((failures+1)); 
                 failed="$failed\n> $variant_dir"
             fi
-            pr -to 4 $TMP_OUT
         fi
 
     done  <<< "$tests"
 
     if [[ $failures == "0" ]]; then 
-        deleteCont | pr -to 2
-        deleteImage | pr -to 2
+        deleteCont | indent
+        deleteImage | indent
     fi
 
     echo -e "Failures: $failures $failed"
