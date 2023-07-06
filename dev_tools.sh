@@ -102,7 +102,7 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     # now that the files are in place, install the packages
     pd=`pwd`
     rvm use 2.6.10 | indent 
-    if [[ "${PIPE_INDENT[0]}" != "0" ]]; then return 1; fi
+    if [[ "${PIPESTATUS[0]}" != "0" ]]; then return 1; fi
     
     cd .container_mount/grade/tests/app
     bundle package --all --all-platforms --quiet > /dev/null
@@ -112,19 +112,6 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
     fi
     # bundle install --local > /dev/null
     cd $pd
-}
-
-clean() {
-    sudo chown -R $USER .container_mount/grade/
-    if [[ $? != "0" ]]; then return 1; fi
-    rm -r .container_mount/
-    if [[ $? != "0" ]]; then return 1; fi
-    return
-}
-
-clean_up() { # Remove .container_mount/ and delete $IMAGE:dev and $IMAGE:latest locally
-    clean
-    deleteImage
 }
 
 clean() {
@@ -171,12 +158,12 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
     buildImage | indent
     runImage | indent
 
-    if [[ "${PIPE_INDENT[0]}" == 0 ]]; then
+    if [[ "${PIPESTATUS[0]}" == 0 ]]; then
         deleteCont > /dev/null
         if [[ $? != "0" ]]; then return 1; fi
 
         deleteImage | indent
-        if [[ "${PIPE_INDENT[0]}" != "0" ]]; then return 1; fi
+        if [[ "${PIPESTATUS[0]}" != "0" ]]; then return 1; fi
     else return 1; fi
     echo done.
 
@@ -199,7 +186,10 @@ run_tests() { # run all tests in tests/
         echo Running test $variant_dir
 
         prep_mount $variant_dir | indent 2
-        if [[ "${PIPE_INDENT[0]}" != "0" ]]; then return 1; fi
+        if [[ "${PIPESTATUS[0]}" != "0" ]]; then 
+            echo "Preparing Mount Failed!" | indent 2
+            return 1
+        fi
         
 
         runImage | indent 2
