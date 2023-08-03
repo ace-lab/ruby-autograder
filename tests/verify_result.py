@@ -1,5 +1,6 @@
 from json import loads as json_loads
 from typing import Dict, Union, List
+from re import sub as str_replace
 import sys
 
 assert len(sys.argv) > 2, "usage: verify_out.py <path/to/expected.json> <path/to/produced.json>"
@@ -16,7 +17,7 @@ class PLTest:
 
     def __init__(self, name: str, output:str, points:int, max_points:int = 1):
         self.name = name
-        self.output = output
+        self.output = str_replace("0x[0-9a-f]+", "0x0000", output)
         self.points = points
         self.max_points = max_points
 
